@@ -1,0 +1,149 @@
+import json
+import yaml
+from Driver import Driver 
+
+class DriverRepNEW:
+    def __init__(self, file_path):
+        self.file_path = file_path
+        self.data = self._read()
+
+    def _read(self):
+        pass
+
+    def _write(self):
+        pass
+
+    def get_by_id(self, driver_id):
+        for driver in self.data:
+            if driver.get_driver_id() == driver_id:
+                return driver
+        return None
+
+    def get_k_n_short_list(self, k, n):
+        start = (k - 1) * n
+        end = start + n
+        return [
+            (driver.get_last_name(), driver.get_phone_number(), driver.get_experience())
+            for driver in self.data[start:end]
+        ]
+
+    def sort_by_field(self, field):
+        if not self.data:
+            raise ValueError("Список водителей пуст, сортировка невозможна.")
+        if not hasattr(Driver, f"get_{field}"):
+            raise ValueError(f"Поле {field} не существует в классе Driver.")
+        self.data.sort(key=lambda driver: getattr(driver, f"get_{field}")())
+        self._write()
+
+
+    def add(self, driver):
+        if not isinstance(driver, Driver):
+            raise ValueError("Ожидается объект класса Driver.")
+        if any(d.get_phone_number() == driver.get_phone_number() for d in self.data):
+            raise ValueError(f"Объект с номером телефона {driver.get_phone_number()} уже существует.")
+
+        new_id = max((d.get_driver_id() for d in self.data), default=0) + 1
+        driver.set_driver_id(new_id)
+        self.data.append(driver)
+        self._write()
+        return new_id
+
+    def update_by_id(self, driver_id, new_driver):
+        if not isinstance(new_driver, Driver):
+            raise ValueError("Ожидается объект класса Driver.")
+        for index, driver in enumerate(self.data):
+            if driver.get_driver_id() == driver_id:
+                if any(
+                    d.get_phone_number() == new_driver.get_phone_number() and d.get_driver_id() != driver_id
+                    for d in self.data
+                ):
+                    raise ValueError(f"Объект с номером телефона {new_driver.get_phone_number()} уже существует.")
+                new_driver.set_driver_id(driver_id)
+                self.data[index] = new_driver
+                self._write()
+                return True
+        return False
+
+    def delete_by_id(self, driver_id):
+        self.data = [driver for driver in self.data if driver.get_driver_id() != driver_id]
+        self._write()
+
+    def get_count(self):
+        return len(self.data)
+    
+class DriverRepJSON(DriverRepNEW):
+    def _read(self):
+        try:
+            with open(self.file_path, 'r') as file:
+                raw_data = json.load(file)
+                return [Driver(**item) for item in raw_data]
+        except (FileNotFoundError, json.JSONDecodeError):
+            return []
+
+    def _write(self):
+        with open(self.file_path, 'w') as file:
+            json.dump([driver.__dict__ for driver in self.data], file)
+
+
+class DriverRepYAML(DriverRepNEW):
+    def _read(self):
+        try:
+            with open(self.file_path, 'r') as file:
+                raw_data = yaml.safe_load(file) or []
+                return [Driver(**item) for item in raw_data]
+        except FileNotFoundError:
+            return []
+
+    def _write(self):
+        with open(self.file_path, 'w') as file:
+            yaml.dump([driver.__dict__ for driver in self.data], file, default_flow_style=False, allow_unicode=True)
+
+    
+if __name__ == "__main__":
+    # JSON
+    handler_json = DriverRepJSON("drivers.json")
+    driver1 = Driver(
+        last_name="Иванов",
+        first_name="Иван",
+        patronymic="Иванович",
+        phone_number="+71234567890",
+        experience=5,
+        birthday="01.01.1985",
+        driver_license="00 01 123456",
+        vehicle_title="00 01 123456",
+        insurance_policy="123 456789012345",
+        license_plate="А123ВС77",
+        driver_id=1  # Указываем конкретный ID
+    )
+    handler_json.add(driver1)
+    print("JSON: Список водителей:", handler_json.get_k_n_short_list(1, 10))
+
+    # YAML
+    handler_yaml = DriverRepYAML("drivers.yaml")
+    driver2 = Driver(
+        last_name="Петров",
+        first_name="Пётр",
+        patronymic="Петрович",
+        phone_number="+79876543210",
+        experience=3,
+        birthday="02.02.1990",
+        driver_license="00 02 654321",
+        vehicle_title="00 02 654321",
+        insurance_policy="456 123987654321",
+        license_plate="Б456АС99",
+        driver_id=2  # Указываем конкретный ID
+    )
+    handler_yaml.add(driver2)
+    print("YAML: Список водителей:", handler_yaml.get_k_n_short_list(1, 10))
+
+    # Проверка получения объекта по ID
+    driver_from_json = handler_json.get_by_id(1)
+    print("JSON: Водитель с ID 1:", driver_from_json)
+
+    driver_from_yaml = handler_yaml.get_by_id(2)
+    print("YAML: Водитель с ID 2:", driver_from_yaml)
+
+    # Удаление водителя
+    handler_json.delete_by_id(1)
+    print("JSON: Список водителей после удаления ID 1:", handler_json.get_k_n_short_list(1, 10))
+
