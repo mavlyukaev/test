@@ -1,0 +1,123 @@
+Неуместная близость
+Причины появления
+Два класса слишком тесно связаны, нарушая принцип инкапсуляции. Один класс имеет доступ к внутренним данным или деталям реализации другого класса. Это усложняет поддержку, так как изменение одного класса часто требует изменений в другом.
+class Order:
+   def __init__(self, items):
+       self._items = items  # Закрытое поле
+ 
+class Invoice:
+   def calculate_total(self, order: Order):
+       total = 0
+       for item in order._items:  # Прямой доступ к закрытому полю
+           total += item['price'] * item['quantity']
+       return total
+Проблема:
+Класс Invoice нарушает инкапсуляцию класса Order, напрямую обращаясь к его закрытым полям.
+ 
+Исправление: доступ к полю класса через метод
+class Order:
+   def __init__(self, items):
+       self._items = items
+ 
+   def get_items(self):
+       return self._items  # Предоставление доступа через метод
+ 
+class Invoice:
+   def calculate_total(self, order: Order):
+       total = 0
+       for item in order.get_items():
+           total += item['price'] * item['quantity']
+       return total
+ 
+Другой вариант: переместить метод внутрь класса
+class Order:
+   def __init__(self, items):
+       self._items = items
+ 
+   def calculate_total(self):
+       return sum(item['price'] * item['quantity'] for item in self._items)
+ 
+Завистливые функции (Feature Envy)
+Функция пытается выполнять действия, которые логически относятся к другому классу или объекту, нарушая SRP (Single Responsibility Principle).
+Пример кода (антипаттерн):
+class Rectangle:
+   def __init__(self, width, height):
+       self.width = width
+       self.height = height
+ 
+def calculate_area(rectangle):
+   return rectangle.width * rectangle.height
+Проблема:
+Функция calculate_area выполняет работу, которая логически принадлежит классу Rectangle.
+ 
+Исправление:
+class Rectangle:
+   def __init__(self, width, height):
+       self.width = width
+       self.height = height
+ 
+   def calculate_area(self):
+       return self.width * self.height
+ 
+Классы данных (Data Classes)
+Описание:
+Классы, которые содержат только данные и не имеют поведения (методов), считаются антипаттерном, так как они нарушают принцип OOP о сосредоточении данных и поведения вместе.
+class User:
+   def __init__(self, name, age):
+       self.name = name
+       self.age = age
+ 
+Проблема:
+Все операции с данными User выполняются вне класса, что увеличивает сложность кода.
+ 
+Исправление:
+class User:
+   def __init__(self, name, age):
+       self.name = name
+       self.age = age
+ 
+   def is_adult(self):
+       return self.age >= 18
+Одержимость элементарными типами (Primitive Obsession)
+Описание:
+Использование примитивных типов (строки, числа и т.д.) для представления сложных объектов или понятий.
+class User:
+   def __init__(self, name, age):
+       self.name = name
+       self.age = age
+ 
+   def is_adult(self):
+       return self.age >= 18
+ 
+Проблема:
+order_id и customer_name лучше представить более сложными объектами, чтобы избежать ошибок (например, неверный формат ID).
+ 
+Исправление:
+class OrderId:
+   def __init__(self, id_value):
+       if not isinstance(id_value, int):
+           raise ValueError("Order ID must be an integer")
+       self.id_value = id_value
+ 
+class Order:
+   def __init__(self, order_id, customer_name):
+       self.order_id = order_id
+       self.customer_name = customer_name
+Ленивый класс (Lazy Class)
+Описание:
+Класс, который практически не содержит логики или данных и используется редко, делает код избыточным.
+class Address:
+   pass
+Проблема:
+Если класс почти ничего не делает, его существование неоправданно.
+Исправление
+class User:
+   def __init__(self, name, age, address):
+       self.name = name
+       self.age = age
+       self.address = address
+Общие рекомендации:
+• Инкапсуляция: сокрытие деталей реализации.
+• Паттерн "Компоновка": создание сложных объектов из более простых.
+• Паттерн "Объект-значение": для представления сложных данных вместо примитивов.
+• Принципы SOLID: для создания гибкой и поддерживаемой архитектуры.
