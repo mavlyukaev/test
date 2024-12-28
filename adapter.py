@@ -29,4 +29,4 @@ old_printer = OldPrinter()
 adapter = PrinterAdapter(old_printer)
 client = Client(adapter)
 
-client.do_print("Hello, world!")  # Output: Printing from OldPrinter: Hello, world!
+client.do_print("Hello, world!")  # : Printing from OldPrinter: Hello, world!
