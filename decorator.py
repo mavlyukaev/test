@@ -46,7 +46,7 @@ class SugarDecorator(CoffeeDecorator):
 
 # Пример использования
 simple_coffee = SimpleCoffee()
-print(simple_coffee.description(), "-", simple_coffee.cost())  # Simple Coffee - 5.0
+print(simple_coffee.description(), "-", simple_coffee.cost())  #  Coffee - 5.0
 
 milk_coffee = MilkDecorator(simple_coffee)
 print(milk_coffee.description(), "-", milk_coffee.cost())  # Simple Coffee, Milk - 6.5
