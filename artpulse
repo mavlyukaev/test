@@ -1,0 +1,311 @@
+// ==============================
+// 1. КОНФИГУРАЦИЯ И ПЕРЕМЕННЫЕ
+// ==============================
+
+const LAYER_CONFIG = {
+  background: { color: '#0078d7', speed: 5, instance: null },
+  midground:  { color: '#107c10', speed: 7, instance: null },
+  foreground: { color: '#d83b01', speed: 9, instance: null }
+};
+
+let canvas;
+let mainImage = null;
+let activeAnimations = [];
+let zoomAnimation = null;
+let currentLayer = null;
+let isDrawing = false;
+let startPoint = null;
+let currentRect = null;
+
+// ===========================
+// 2. ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
+// ===========================
+
+document.addEventListener('DOMContentLoaded', () => {
+  initCanvas();
+  setupEventListeners();
+});
+
+function initCanvas() {
+  const canvasEl = document.getElementById('editor-canvas');
+  canvasEl.width = window.innerWidth;
+  canvasEl.height = window.innerHeight;
+
+  canvas = new fabric.Canvas(canvasEl, {
+    backgroundColor: '#f0f0f0',
+    selection: false,
+    preserveObjectStacking: true
+  });
+
+  canvas.on('mouse:down', startDrawing);
+  canvas.on('mouse:move', handleMouseMove);
+  canvas.on('mouse:up', finishDrawing);
+}
+
+// ==========================
+// 3. ОБРАБОТЧИКИ СОБЫТИЙ
+// ==========================
+
+function setupEventListeners() {
+  document.getElementById('uploader').addEventListener('change', handleImageUpload);
+
+  ['background', 'midground', 'foreground'].forEach(layer => {
+    const element = document.getElementById(`${layer}-speed`);
+    if (element) {
+      element.addEventListener('input', updateSpeeds);
+    }
+  });
+}
+
+// ==========================
+// 4. ЗАГРУЗКА ИЗОБРАЖЕНИЯ
+// ==========================
+
+async function handleImageUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = event => loadMainImage(event.target.result);
+  reader.readAsDataURL(file);
+
+  document.getElementById('upload-page').classList.add('hidden');
+  document.getElementById('editor-page').classList.remove('hidden');
+  document.getElementById('filename').textContent = file.name;
+}
+
+function loadMainImage(src) {
+  fabric.Image.fromURL(src, img => {
+    if (mainImage) canvas.remove(mainImage);
+
+    mainImage = img.set({
+      left: canvas.width / 2,
+      top: canvas.height / 2,
+      originX: 'center',
+      originY: 'center',
+      selectable: true,
+      evented: true,
+      hasControls: false,
+      lockMovementX: true,
+      lockMovementY: true
+    });
+
+    mainImage.scaleToWidth(canvas.width * 0.8);
+    canvas.add(mainImage).sendToBack(mainImage);
+    canvas.requestRenderAll();
+  });
+}
+
+// ==========================
+// 5. ВЫДЕЛЕНИЕ СЛОЕВ
+// ==========================
+
+function setLayer(layerType) {
+  currentLayer = layerType;
+  canvas.defaultCursor = 'crosshair';
+}
+
+function startDrawing(o) {
+  if (!currentLayer || isDrawing) return;
+
+  isDrawing = true;
+  startPoint = canvas.getPointer(o.e);
+  currentRect = new fabric.Rect({
+    left: startPoint.x,
+    top: startPoint.y,
+    width: 0,
+    height: 0,
+    fill: 'rgba(0,0,0,0.2)',
+    stroke: LAYER_CONFIG[currentLayer].color,
+    strokeWidth: 2,
+    selectable: false,
+    evented: false
+  });
+
+  canvas.add(currentRect);
+}
+
+function handleMouseMove(o) {
+  if (!isDrawing || !currentRect) return;
+
+  const pointer = canvas.getPointer(o.e);
+  const width = pointer.x - startPoint.x;
+  const height = pointer.y - startPoint.y;
+
+  currentRect.set({
+    left: width < 0 ? pointer.x : startPoint.x,
+    top: height < 0 ? pointer.y : startPoint.y,
+    width: Math.abs(width),
+    height: Math.abs(height)
+  });
+
+  canvas.requestRenderAll();
+}
+
+function finishDrawing() {
+  if (!isDrawing) return;
+  isDrawing = false;
+
+  if (currentRect && currentRect.width > 10 && currentRect.height > 10) {
+    createLayerFromSelection();
+  } else if (currentRect) {
+    canvas.remove(currentRect);
+  }
+
+  currentRect = null;
+}
+
+// =====================================
+// 6. СОЗДАНИЕ СЛОЯ ИЗ ВЫДЕЛЕННОЙ ОБЛАСТИ
+// =====================================
+
+function createLayerFromSelection() {
+  if (!currentLayer || !currentRect || !mainImage) {
+    console.error('Ошибка: не удалось создать слой');
+    return;
+  }
+
+  if (LAYER_CONFIG[currentLayer].instance) {
+    canvas.remove(LAYER_CONFIG[currentLayer].instance);
+  }
+
+  const scaleX = mainImage.scaleX || 1;
+  const scaleY = mainImage.scaleY || 1;
+
+  const mainLeft = typeof mainImage.left === 'number' ? mainImage.left : canvas.width / 2;
+  const mainTop = typeof mainImage.top === 'number' ? mainImage.top : canvas.height / 2;
+
+  const offsetX = (currentRect.left - mainLeft) / scaleX;
+  const offsetY = (currentRect.top - mainTop) / scaleY;
+
+  const clipPath = new fabric.Rect({
+    left: -offsetX,
+    top: -offsetY,
+    width: currentRect.width / scaleX,
+    height: currentRect.height / scaleY,
+    originX: 'left',
+    originY: 'top'
+  });
+
+  mainImage.clone(cloned => {
+    cloned.set({
+      clipPath,
+      left: currentRect.left + currentRect.width / 2,
+      top: currentRect.top + currentRect.height / 2,
+      originX: 'center',
+      originY: 'center',
+      scaleX: scaleX,
+      scaleY: scaleY,
+      selectable: false,
+      evented: false,
+      hasControls: false
+    });
+
+    LAYER_CONFIG[currentLayer].instance = cloned;
+    canvas.add(cloned);
+    canvas.requestRenderAll();
+  });
+}
+
+// =========================
+// 7. АНИМАЦИИ: ЗУМ И ПАРАЛЛАКС
+// =========================
+
+function applyZoom() {
+  if (!mainImage) return alert('Сначала загрузите изображение!');
+
+  if (zoomAnimation) {
+    zoomAnimation.kill();
+    zoomAnimation = null;
+    gsap.to(mainImage, {
+      scaleX: 1,
+      scaleY: 1,
+      duration: 0.5,
+      onUpdate: () => canvas.requestRenderAll()
+    });
+    return;
+  }
+
+  zoomAnimation = gsap.to(mainImage, {
+    scaleX: 1.5,
+    scaleY: 1.5,
+    duration: 2,
+    yoyo: true,
+    repeat: -1,
+    ease: "power2.inOut",
+    onUpdate: () => canvas.requestRenderAll()
+  });
+}
+
+function applyParallax() {
+  if (!mainImage) return alert('Сначала загрузите изображение!');
+
+  const allLayersSelected = Object.values(LAYER_CONFIG).every(layer => layer.instance);
+  if (!allLayersSelected) {
+    alert('Выделите все три слоя перед запуском!');
+    return;
+  }
+
+  stopAnimations();
+
+  Object.entries(LAYER_CONFIG).forEach(([layerType, config]) => {
+    const animation = gsap.to(config.instance, {
+      left: `+=${config.speed * 50}`,
+      duration: 20 - config.speed,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+      onUpdate: () => canvas.requestRenderAll()
+    });
+
+    activeAnimations.push(animation);
+  });
+}
+
+function stopAnimations() {
+  activeAnimations.forEach(anim => anim.kill());
+  activeAnimations = [];
+}
+
+// ===========================
+// 8. ДОПОЛНИТЕЛЬНЫЕ ФУНКЦИИ
+// ===========================
+
+function updateSpeeds() {
+  Object.entries(LAYER_CONFIG).forEach(([layer, config]) => {
+    const element = document.getElementById(`${layer}-speed`);
+    if (element) {
+      config.speed = parseInt(element.value) || 5;
+    }
+  });
+}
+
+function resetLayers() {
+  stopAnimations();
+
+  Object.values(LAYER_CONFIG).forEach(config => {
+    if (config.instance) {
+      canvas.remove(config.instance);
+      config.instance = null;
+    }
+  });
+
+  if (currentRect) {
+    canvas.remove(currentRect);
+    currentRect = null;
+  }
+
+  canvas.clear().add(mainImage).requestRenderAll();
+}
+
+// ===========================
+// 9. ПОЛНОЭКРАННЫЙ РЕЖИМ
+// ===========================
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(console.error);
+  } else {
+    document.exitFullscreen();
+  }
+}
