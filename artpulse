@@ -151,7 +151,7 @@ function finishDrawing() {
   } else if (currentRect) {
     canvas.remove(currentRect);
   }
-
+  // Обнуляем currentRect, т.к. выделение завершено
   currentRect = null;
 }
 
@@ -165,33 +165,42 @@ function createLayerFromSelection() {
     return;
   }
 
+  // Сохраняем значения currentRect в локальные переменные,
+  // чтобы они не потерялись из-за асинхронного clone
+  const rectLeft = currentRect.left;
+  const rectTop = currentRect.top;
+  const rectWidth = currentRect.width;
+  const rectHeight = currentRect.height;
+
+  // Если уже существует слой для текущего типа — удаляем его
   if (LAYER_CONFIG[currentLayer].instance) {
     canvas.remove(LAYER_CONFIG[currentLayer].instance);
   }
 
   const scaleX = mainImage.scaleX || 1;
   const scaleY = mainImage.scaleY || 1;
+  const mainLeft = (typeof mainImage.left === 'number') ? mainImage.left : canvas.width / 2;
+  const mainTop = (typeof mainImage.top === 'number') ? mainImage.top : canvas.height / 2;
 
-  const mainLeft = typeof mainImage.left === 'number' ? mainImage.left : canvas.width / 2;
-  const mainTop = typeof mainImage.top === 'number' ? mainImage.top : canvas.height / 2;
-
-  const offsetX = (currentRect.left - mainLeft) / scaleX;
-  const offsetY = (currentRect.top - mainTop) / scaleY;
+  // Вычисляем смещение (offset) для clipPath
+  const offsetX = (rectLeft - mainLeft) / scaleX;
+  const offsetY = (rectTop - mainTop) / scaleY;
 
   const clipPath = new fabric.Rect({
     left: -offsetX,
     top: -offsetY,
-    width: currentRect.width / scaleX,
-    height: currentRect.height / scaleY,
+    width: rectWidth / scaleX,
+    height: rectHeight / scaleY,
     originX: 'left',
     originY: 'top'
   });
 
+  // Асинхронно клонируем mainImage, чтобы применить clipPath
   mainImage.clone(cloned => {
     cloned.set({
       clipPath,
-      left: currentRect.left + currentRect.width / 2,
-      top: currentRect.top + currentRect.height / 2,
+      left: rectLeft + rectWidth / 2,
+      top: rectTop + rectHeight / 2,
       originX: 'center',
       originY: 'center',
       scaleX: scaleX,
@@ -257,7 +266,6 @@ function applyParallax() {
       ease: "sine.inOut",
       onUpdate: () => canvas.requestRenderAll()
     });
-
     activeAnimations.push(animation);
   });
 }
@@ -294,7 +302,7 @@ function resetLayers() {
     canvas.remove(currentRect);
     currentRect = null;
   }
-
+  
   canvas.clear().add(mainImage).requestRenderAll();
 }
 
