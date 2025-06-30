@@ -69,10 +69,9 @@
 > Открыть Docker Desktop
 > Запустить Redis в Docker: docker run -d --name redis -p 6379:6379 redis
 
-5. Запустите *компоненты*:
-**[Веб-сервер]**:
-> python main.py
+5. Запустите *веб-сервер*:
+> **[Веб-сервер]**: python main.py
 
-**[Обработчик]** (в новом терминале):
+6. Запустите *Обработчик* (в новом терминале):
 > venv\Scripts\activate
 > celery -A main.celery worker --loglevel=info --pool=solo
