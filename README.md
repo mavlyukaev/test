@@ -63,6 +63,7 @@
 
 3. Установите *зависимости*:
 > **[Windows]**: pip install torch==2.4.1+cpu torchaudio==2.4.1+cpu torchvision==0.19.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+
 > **[Windows]**: pip install -r requirements.txt
 
 4. Запуск *Docker*:
@@ -74,4 +75,5 @@
 
 6. Запустите *Обработчик* (в новом терминале):
 > venv\Scripts\activate
+
 > celery -A main.celery worker --loglevel=info --pool=solo
