@@ -56,15 +56,23 @@
 
 **Установка**
 1. Создайте *виртуальное окружение*:
-> **[Linux]**: python3 -m venv venv
 > **[Windows]**: python -m venv venv
 
 2. Активируйте *виртуальное окружение*:
-> **[Linux]**: source venv/bin/activate
+> **[Windows]**: venv\Scripts\activate
 
 3. Установите *зависимости*:
-> **[Linux/Windows]** pip install -r requirements.txt
+> **[Windows]**: pip install torch==2.4.1+cpu torchaudio==2.4.1+cpu torchvision==0.19.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+> **[Windows]**: pip install -r requirements.txt
 
-4. Запустите *компоненты*:
-> **[Веб-сервер]**: python3 main.py
-> **[Обработчик]**: celery -A main.celery worker
+4. Запуск *Docker*:
+> Открыть Docker Desktop
+> Запустить Redis в Docker: docker run -d --name redis -p 6379:6379 redis
+
+5. Запустите *компоненты*:
+> **[Веб-сервер]**: python main.py
+
+> **[Обработчик]** (в новом терминале):
+venv\Scripts\activate
+celery -A main.celery worker --loglevel=info --pool=solo
+
