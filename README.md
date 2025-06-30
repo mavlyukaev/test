@@ -68,6 +68,7 @@
 
 4. Запуск *Docker*:
 > Открыть Docker Desktop
+
 > Запустить Redis в Docker: docker run -d --name redis -p 6379:6379 redis
 
 5. Запустите *веб-сервер*:
