@@ -45,7 +45,7 @@
 - **Кумулятивность (string)**: добавить к целевому значению предыдущие кадры;
 - **Плавность(string)**: плавный вариант анимации (часто в виде синусоидальной волны); 
 
-### Анимации. Приближение.
+### Анимации. Приближение. Параметры
 - **Использовать (boolean)**: использовать анимацию в выходном видео;
 - **Зациклить (boolean)**: повторять анимацию;
 - **Реверс (string)**: направление для воспроизведения анимации;
@@ -56,24 +56,24 @@
 
 **Установка**
 1. Создайте *виртуальное окружение*:
-> **[Windows]**: python -m venv venv
+> python -m venv venv
 
 2. Активируйте *виртуальное окружение*:
-> **[Windows]**: venv\Scripts\activate
+> venv\Scripts\activate
 
 3. Установите *зависимости*:
-> **[Windows]**: pip install torch==2.4.1+cpu torchaudio==2.4.1+cpu torchvision==0.19.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
+> pip install torch==2.4.1+cpu torchaudio==2.4.1+cpu torchvision==0.19.1+cpu -f https://download.pytorch.org/whl/cpu/torch_stable.html
 
-> **[Windows]**: pip install -r requirements.txt
+> pip install -r requirements.txt
 
 4. Запуск *Docker*:
 > Открыть Docker Desktop
 > Запустить Redis в Docker: docker run -d --name redis -p 6379:6379 redis
 
 5. Запустите *веб-сервер*:
-> **[Веб-сервер]**: python main.py
+> python main.py
 
-6. Запустите *Обработчик* (в новом терминале):
+6. Запустите *обработчик* (в новом терминале):
 > venv\Scripts\activate
 
 > celery -A main.celery worker --loglevel=info --pool=solo
